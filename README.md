@@ -1,30 +1,14 @@
-# A-share Valuation MVP
+# A-Share Valuation Static Preview
 
-This project provides a minimal A-share valuation analysis stack with a FastAPI backend and React + ECharts frontend.
+This repository now contains a single, self-contained HTML demo that runs entirely in the browser with mocked A-share factor data. It is optimized for quick visual review (e.g., GitHub Pages) without any backend or build tooling.
 
-## Backend
+## Features
+- Dark-themed layout with market overview, industry heatmap, PB vs ROE scatter, snapshot table, and stock valuation card.
+- Interactive selectors for date / industry / ticker powered by in-page mock data (multiple dates included).
+- All computations (percentiles, z-like scores, value score) are handled in JavaScript—no uploads or APIs required.
 
-- **Tech**: FastAPI, pandas, numpy
-- **Run**: `uvicorn app.main:app --reload`
-- **Key module**: `app/factor_engine.py` implements `FactorEngine` for reading Excel factor data, cleaning, z-score standardization, and composite value scoring.
+## Usage
+1. Open `index.html` directly in your browser, or host it statically (GitHub Pages, Vercel static, S3, etc.).
+2. Use the selectors on the left to switch dates/industries/tickers and explore the charts and table.
 
-## Frontend
-
-- **Tech**: React (Vite) + echarts-for-react
-- **Run**:
-  ```bash
-  cd frontend
-  npm install
-  npm run dev
-  ```
-- The dev server proxies API calls to `http://localhost:8000`.
-
-## Excel Format
-
-Upload an Excel file with a sheet named `factors` and columns such as `date`, `ticker`, `industry`, `PE_TTM`, `PB`, `PS_TTM`, `EV_EBITDA`, etc.
-
-## Notes
-
-- API base path: `/api`
-- CORS is open for local development.
-- Extend `FactorEngine` to add new factor composites (quality, growth, risk) or cross-market comparisons.
+No additional dependencies or commands are needed.

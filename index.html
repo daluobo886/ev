@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A-Share Valuation Preview (Static Mock)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22d3ee;
+      --accent-2: #a855f7;
+      --border: #1f2937;
+      --table-header: #0b1220;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 35%),
+                  radial-gradient(circle at 80% 0%, rgba(168,85,247,0.08), transparent 35%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      padding: 20px 24px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,23,42,0.9);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .brand { font-weight: 700; letter-spacing: 0.6px; }
+    .subtitle { color: var(--muted); font-size: 14px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      padding: 16px 20px 32px;
+    }
+    .panel {
+      background: linear-gradient(145deg, rgba(255,255,255,0.02), rgba(255,255,255,0.0));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    h2 span { color: var(--muted); font-weight: 400; font-size: 13px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    select, button {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      transition: border 0.2s ease, transform 0.1s ease;
+    }
+    select:focus, button:focus { outline: none; border-color: var(--accent); }
+    button {
+      margin-top: 10px;
+      cursor: pointer;
+      background: linear-gradient(120deg, rgba(34,211,238,0.14), rgba(168,85,247,0.14));
+      border-color: rgba(34,211,238,0.25);
+    }
+    .badge {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(34,211,238,0.12);
+      color: var(--text);
+      font-size: 12px;
+      gap: 6px;
+      align-items: center;
+      border: 1px solid rgba(34,211,238,0.25);
+    }
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    #heatmap, #scatter { width: 100%; height: 320px; }
+    .table-wrapper { overflow: auto; max-height: 320px; border-radius: 8px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--table-header); position: sticky; top: 0; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+    tr:hover td { background: rgba(34,211,238,0.05); }
+    .card {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 10px;
+      background: var(--panel);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .metric {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .metric h4 { margin: 0 0 6px; font-size: 14px; color: var(--muted); font-weight: 600; }
+    .metric .value { font-size: 18px; font-weight: 700; }
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .bar span {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(34,211,238,0.4), rgba(168,85,247,0.4));
+      border-radius: 999px;
+    }
+    .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .footer-note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 12px; }
+    @media (max-width: 1080px) { .layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="brand">A-Share Valuation Lab · Static Preview</div>
+      <div class="subtitle">Mocked factors • In-browser analytics • Ready for GitHub Pages</div>
+    </div>
+    <div class="badge">Demo Data<span id="badge-date">2024-03-31</span></div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel">
+      <h2>Controls <span>选择日期 / 行业 / 股票</span></h2>
+      <div>
+        <label for="dateSelect">Date</label>
+        <select id="dateSelect"></select>
+      </div>
+      <div style="margin-top:10px;">
+        <label for="industrySelect">Industry</label>
+        <select id="industrySelect"></select>
+      </div>
+      <div style="margin-top:10px;">
+        <label for="tickerSelect">Ticker</label>
+        <select id="tickerSelect"></select>
+      </div>
+      <button id="applyBtn">Apply Selection</button>
+      <div style="margin-top:14px;" class="muted">交互逻辑全部在浏览器中完成，支持离线预览。</div>
+    </aside>
+
+    <main style="display:grid; gap:12px;">
+      <section class="panel">
+        <h2>Market Overview <span>行业热力 + PB vs ROE</span></h2>
+        <div class="grid-two">
+          <div><div id="heatmap"></div></div>
+          <div><div id="scatter"></div></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Snapshot Table <span>估值截面</span></h2>
+        <div class="table-wrapper">
+          <table id="snapshotTable">
+            <thead>
+              <tr>
+                <th>Ticker</th><th>Name</th><th>Industry</th><th>Close</th>
+                <th>PE</th><th>PB</th><th>PS</th><th>EV/EBITDA</th>
+                <th>Value Score</th><th>PE pct</th><th>PB pct</th><th>PS pct</th><th>EV/EBITDA pct</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Stock Valuation Card <span>个股估值卡片</span></h2>
+        <div class="card" id="stockCard">
+          <div class="metric">
+            <h4>基本信息</h4>
+            <div class="value" id="cardBasic">—</div>
+            <div class="muted" id="cardIndustry">—</div>
+          </div>
+          <div class="metric">
+            <h4>Value Score</h4>
+            <div class="value" id="cardScore">—</div>
+            <div class="bar"><span id="cardScoreBar" style="width:0%"></span></div>
+          </div>
+          <div class="metric">
+            <h4>Valuation</h4>
+            <div class="pill-row" id="cardValuation"></div>
+            <div class="muted">PE / PB / PS / EV_EBITDA</div>
+          </div>
+          <div class="metric">
+            <h4>Percentiles</h4>
+            <div class="pill-row" id="cardPercentile"></div>
+            <div class="muted">全市场 vs 同行业</div>
+          </div>
+        </div>
+      </section>
+      <div class="footer-note">Mock-only preview · 无需后端和文件上传 · 可直接部署到 GitHub Pages</div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script>
+    const mockData = [
+      {date:"2024-03-31",ticker:"600519.SH",name:"贵州茅台",industry:"Beverage",close:1720,mktcap:2.17e12,PE_TTM:29,PE_FWD:27,PB:7.4,PS_TTM:9.2,EV_EBITDA:20,ROE:0.33,EPS_G_3Y:0.19,Sales_G_3Y:0.15,Beta:0.85,RnD_to_Sales:0.01},
+      {date:"2024-03-31",ticker:"300750.SZ",name:"宁德时代",industry:"EV Battery",close:186,mktcap:8.1e11,PE_TTM:30,PE_FWD:27,PB:5.8,PS_TTM:5.2,EV_EBITDA:23,ROE:0.18,EPS_G_3Y:0.35,Sales_G_3Y:0.32,Beta:1.10,RnD_to_Sales:0.06},
+      {date:"2024-03-31",ticker:"600036.SH",name:"招商银行",industry:"Bank",close:33.5,mktcap:8.5e11,PE_TTM:6.9,PE_FWD:6.4,PB:0.95,PS_TTM:2.2,EV_EBITDA:5.4,ROE:0.16,EPS_G_3Y:0.07,Sales_G_3Y:0.05,Beta:0.95,RnD_to_Sales:0.01},
+      {date:"2024-03-31",ticker:"000858.SZ",name:"五粮液",industry:"Beverage",close:175.8,mktcap:6.8e11,PE_TTM:22,PE_FWD:21,PB:5.6,PS_TTM:7.1,EV_EBITDA:15,ROE:0.26,EPS_G_3Y:0.17,Sales_G_3Y:0.13,Beta:0.90,RnD_to_Sales:0.02},
+      {date:"2024-03-31",ticker:"600276.SH",name:"恒瑞医药",industry:"Pharma",close:46.2,mktcap:2.8e11,PE_TTM:55,PE_FWD:38,PB:5.1,PS_TTM:8.4,EV_EBITDA:31,ROE:0.12,EPS_G_3Y:0.08,Sales_G_3Y:0.10,Beta:0.88,RnD_to_Sales:0.14},
+      {date:"2024-03-31",ticker:"002594.SZ",name:"比亚迪",industry:"EV",close:235,mktcap:6.9e11,PE_TTM:24,PE_FWD:21,PB:4.1,PS_TTM:1.8,EV_EBITDA:14,ROE:0.18,EPS_G_3Y:0.43,Sales_G_3Y:0.34,Beta:1.15,RnD_to_Sales:0.04},
+      {date:"2024-03-31",ticker:"600703.SH",name:"三安光电",industry:"Semiconductor",close:23.1,mktcap:1.9e11,PE_TTM:38,PE_FWD:30,PB:3.3,PS_TTM:5.7,EV_EBITDA:28,ROE:0.09,EPS_G_3Y:0.05,Sales_G_3Y:0.12,Beta:1.20,RnD_to_Sales:0.16},
+      {date:"2024-01-31",ticker:"600519.SH",name:"贵州茅台",industry:"Beverage",close:1640,mktcap:2.08e12,PE_TTM:27,PE_FWD:25,PB:7.0,PS_TTM:8.7,EV_EBITDA:19,ROE:0.32,EPS_G_3Y:0.18,Sales_G_3Y:0.14,Beta:0.84,RnD_to_Sales:0.01},
+      {date:"2024-01-31",ticker:"300750.SZ",name:"宁德时代",industry:"EV Battery",close:178,mktcap:7.9e11,PE_TTM:28,PE_FWD:25,PB:5.5,PS_TTM:5.0,EV_EBITDA:22,ROE:0.17,EPS_G_3Y:0.33,Sales_G_3Y:0.30,Beta:1.08,RnD_to_Sales:0.06},
+      {date:"2024-01-31",ticker:"600036.SH",name:"招商银行",industry:"Bank",close:32.8,mktcap:8.3e11,PE_TTM:6.6,PE_FWD:6.1,PB:0.92,PS_TTM:2.1,EV_EBITDA:5.1,ROE:0.15,EPS_G_3Y:0.06,Sales_G_3Y:0.04,Beta:0.94,RnD_to_Sales:0.01},
+      {date:"2024-01-31",ticker:"000858.SZ",name:"五粮液",industry:"Beverage",close:168.4,mktcap:6.5e11,PE_TTM:21,PE_FWD:20,PB:5.4,PS_TTM:6.8,EV_EBITDA:14,ROE:0.25,EPS_G_3Y:0.16,Sales_G_3Y:0.12,Beta:0.89,RnD_to_Sales:0.02},
+      {date:"2024-01-31",ticker:"600276.SH",name:"恒瑞医药",industry:"Pharma",close:44.8,mktcap:2.7e11,PE_TTM:52,PE_FWD:36,PB:4.9,PS_TTM:8.2,EV_EBITDA:30,ROE:0.11,EPS_G_3Y:0.07,Sales_G_3Y:0.09,Beta:0.87,RnD_to_Sales:0.14},
+      {date:"2024-01-31",ticker:"002594.SZ",name:"比亚迪",industry:"EV",close:228,mktcap:6.7e11,PE_TTM:23,PE_FWD:20,PB:4.0,PS_TTM:1.7,EV_EBITDA:13,ROE:0.17,EPS_G_3Y:0.41,Sales_G_3Y:0.32,Beta:1.14,RnD_to_Sales:0.04},
+      {date:"2024-01-31",ticker:"600703.SH",name:"三安光电",industry:"Semiconductor",close:22.5,mktcap:1.8e11,PE_TTM:36,PE_FWD:29,PB:3.2,PS_TTM:5.5,EV_EBITDA:27,ROE:0.09,EPS_G_3Y:0.05,Sales_G_3Y:0.11,Beta:1.18,RnD_to_Sales:0.16}
+    ];
+
+    const factors = ["PE_TTM", "PB", "PS_TTM", "EV_EBITDA"];
+
+    function groupBy(arr, key) {
+      return arr.reduce((map, item) => {
+        const k = item[key] ?? "Unknown";
+        map[k] = map[k] || [];
+        map[k].push(item);
+        return map;
+      }, {});
+    }
+
+    function calcStats(values) {
+      const n = values.length;
+      if (!n) return { mean: 0, std: 1, sorted: [] };
+      const mean = values.reduce((a,b)=>a+b,0)/n;
+      const variance = values.reduce((a,b)=>a + Math.pow(b-mean,2),0)/(n||1);
+      const std = Math.sqrt(variance) || 1;
+      const sorted = [...values].sort((a,b)=>a-b);
+      return { mean, std, sorted };
+    }
+
+    function percentile(sorted, value) {
+      if (!sorted.length) return 0;
+      let idx = sorted.findIndex(v => v >= value);
+      if (idx === -1) idx = sorted.length - 1;
+      return Math.round((idx / (sorted.length - 1 || 1)) * 100);
+    }
+
+    function computeSnapshot(date, industry) {
+      const rows = mockData.filter(r => r.date === date && (!industry || industry === "all" || r.industry === industry));
+      const stats = {};
+      factors.forEach(f => { stats[f] = calcStats(rows.map(r => r[f]).filter(v => isFinite(v))); });
+      return rows.map(r => {
+        const out = {...r};
+        factors.forEach(f => {
+          const z = (r[f] - stats[f].mean) / stats[f].std;
+          out[`${f}_z`] = z;
+          out[`${f}_pct`] = percentile(stats[f].sorted, r[f]);
+        });
+        const avgPct = factors.reduce((acc,f)=> acc + (100 - out[`${f}_pct`]), 0) / factors.length; // lower better
+        out.value_score = Math.round(avgPct);
+        return out;
+      }).sort((a,b)=> b.value_score - a.value_score);
+    }
+
+    function renderControls() {
+      const dates = [...new Set(mockData.map(r => r.date))].sort();
+      const dateSelect = document.getElementById('dateSelect');
+      dateSelect.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+      dateSelect.value = dates[dates.length - 1];
+
+      updateIndustries();
+      updateTickers();
+    }
+
+    function updateIndustries() {
+      const date = document.getElementById('dateSelect').value;
+      const industries = [...new Set(mockData.filter(r=>r.date===date).map(r=>r.industry))].sort();
+      const industrySelect = document.getElementById('industrySelect');
+      industrySelect.innerHTML = ['<option value="all">All</option>', ...industries.map(i=>`<option value="${i}">${i}</option>`)].join('');
+      industrySelect.value = 'all';
+    }
+
+    function updateTickers() {
+      const date = document.getElementById('dateSelect').value;
+      const industry = document.getElementById('industrySelect').value;
+      const tickers = mockData.filter(r=>r.date===date && (industry==='all' || r.industry===industry));
+      const tickerSelect = document.getElementById('tickerSelect');
+      tickerSelect.innerHTML = tickers.map(t=>`<option value="${t.ticker}">${t.ticker} · ${t.name}</option>`).join('');
+      if (tickers[0]) tickerSelect.value = tickers[0].ticker;
+    }
+
+    function drawHeatmap(snapshot) {
+      const grouped = groupBy(snapshot, 'industry');
+      const industries = Object.keys(grouped);
+      const metrics = ['Value Score','PE','PB','PS'];
+      const cells = [];
+      industries.forEach((ind, i) => {
+        const items = grouped[ind];
+        const med = (arr) => { const s=[...arr].sort((a,b)=>a-b); return s[Math.floor(s.length/2)] || 0; };
+        const medScore = med(items.map(r=>r.value_score));
+        const medPE = med(items.map(r=>r.PE_TTM));
+        const medPB = med(items.map(r=>r.PB));
+        const medPS = med(items.map(r=>r.PS_TTM));
+        [[0,medScore],[1,medPE],[2,medPB],[3,medPS]].forEach(([j,val])=>{
+          cells.push([j,i,val]);
+        });
+      });
+      const chart = echarts.init(document.getElementById('heatmap'));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { formatter: ({value}) => `${metrics[value[0]]}: ${value[2].toFixed(1)}` },
+        grid: { left: 80, right: 20, top: 30, bottom: 20 },
+        xAxis: { type:'category', data: metrics, axisLine:{lineStyle:{color:'#334155'}} },
+        yAxis: { type:'category', data: industries, axisLine:{lineStyle:{color:'#334155'}} },
+        visualMap: {
+          min: Math.min(...cells.map(c=>c[2])) - 1,
+          max: Math.max(...cells.map(c=>c[2])) + 1,
+          calculable: false,
+          orient:'horizontal', left:'center', bottom:0,
+          inRange: { color:['#0ea5e9','#22d3ee','#a855f7'] }
+        },
+        series: [{
+          name:'heat', type:'heatmap', data: cells,
+          label:{ show:true, color:'#e5e7eb', formatter: ({value}) => value[2].toFixed(1) },
+          emphasis:{ itemStyle:{ shadowBlur:10, shadowColor:'rgba(0,0,0,0.4)' } }
+        }]
+      });
+    }
+
+    function drawScatter(snapshot) {
+      const chart = echarts.init(document.getElementById('scatter'));
+      const industries = [...new Set(snapshot.map(r=>r.industry))];
+      const series = industries.map(ind => ({
+        name: ind,
+        type: 'scatter',
+        data: snapshot.filter(r=>r.industry===ind).map(r=>({
+          value: [r.PB, r.ROE*100, r.mktcap, r.ticker],
+          name: `${r.ticker} ${r.name}`,
+          label: { show:false }
+        })),
+        symbolSize: d => Math.sqrt(d[2])/800,
+        emphasis: { focus: 'series' }
+      }));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { formatter: (p) => {
+          const [pb, roe, , ticker] = p.value;
+          return `${p.seriesName}<br>${p.name}<br>PB: ${pb.toFixed(2)} · ROE: ${roe.toFixed(1)}%`;
+        } },
+        legend: { top: 0, textStyle:{color:'#e5e7eb'} },
+        xAxis: { name:'PB', axisLine:{lineStyle:{color:'#334155'}}, splitLine:{lineStyle:{color:'#1f2937'}} },
+        yAxis: { name:'ROE (%)', axisLine:{lineStyle:{color:'#334155'}}, splitLine:{lineStyle:{color:'#1f2937'}} },
+        series
+      });
+    }
+
+    function renderTable(snapshot) {
+      const tbody = document.querySelector('#snapshotTable tbody');
+      tbody.innerHTML = snapshot.map(r => `
+        <tr>
+          <td>${r.ticker}</td>
+          <td>${r.name}</td>
+          <td>${r.industry}</td>
+          <td>${r.close.toFixed(2)}</td>
+          <td>${r.PE_TTM.toFixed(1)}</td>
+          <td>${r.PB.toFixed(2)}</td>
+          <td>${r.PS_TTM.toFixed(2)}</td>
+          <td>${r.EV_EBITDA.toFixed(1)}</td>
+          <td>${r.value_score}</td>
+          <td>${r.PE_TTM_pct}%</td>
+          <td>${r.PB_pct}%</td>
+          <td>${r.PS_TTM_pct}%</td>
+          <td>${r.EV_EBITDA_pct}%</td>
+        </tr>`).join('');
+    }
+
+    function renderCard(snapshot) {
+      const ticker = document.getElementById('tickerSelect').value;
+      const all = snapshot;
+      const row = snapshot.find(r=>r.ticker===ticker) || all[0];
+      if (!row) return;
+      const industryPeer = all.filter(r=>r.industry===row.industry);
+      const pct = (arr, val, key) => percentile(arr.map(x=>x[key]).sort((a,b)=>a-b), val);
+      const marketPct = pct(all, row.PE_TTM, 'PE_TTM');
+      const industryPct = pct(industryPeer, row.PE_TTM, 'PE_TTM');
+
+      document.getElementById('cardBasic').textContent = `${row.ticker} · ${row.name}`;
+      document.getElementById('cardIndustry').textContent = row.industry;
+      document.getElementById('cardScore').textContent = row.value_score;
+      document.getElementById('cardScoreBar').style.width = `${row.value_score}%`;
+
+      const valTags = factors.map(f => `<span class="badge" style="background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.08)">${f.replace('_',' ')}: ${row[f].toFixed(2)}</span>`).join('');
+      document.getElementById('cardValuation').innerHTML = valTags;
+
+      document.getElementById('cardPercentile').innerHTML = `
+        <span class="badge">Market PE pct: ${marketPct}%</span>
+        <span class="badge" style="background:rgba(168,85,247,0.12);border-color:rgba(168,85,247,0.25)">Industry PE pct: ${industryPct}%</span>
+      `;
+    }
+
+    function applySelection() {
+      const date = document.getElementById('dateSelect').value;
+      const industry = document.getElementById('industrySelect').value;
+      document.getElementById('badge-date').textContent = date;
+      const snapshot = computeSnapshot(date, industry);
+      drawHeatmap(snapshot);
+      drawScatter(snapshot);
+      renderTable(snapshot);
+      renderCard(snapshot);
+    }
+
+    document.getElementById('dateSelect').addEventListener('change', () => { updateIndustries(); updateTickers(); applySelection(); });
+    document.getElementById('industrySelect').addEventListener('change', () => { updateTickers(); applySelection(); });
+    document.getElementById('applyBtn').addEventListener('click', applySelection);
+
+    renderControls();
+    applySelection();
+  </script>
+</body>
+</html>
